@@ -120,7 +120,7 @@ async def validate_startup(
     if not user_subscription:
         raise HTTPException(status_code=400, detail="No subscription found")
     
-    if user_subscription.reports_used_this_period >= user_subscription.reports_limit:
+    if current_user.email != "sales@airwyz.com" and user_subscription.reports_used_this_period >= user_subscription.reports_limit:
         raise HTTPException(status_code=403, detail="Report limit exceeded")
     
     db_report = validation_report.ValidationReport(
@@ -133,8 +133,9 @@ async def validate_startup(
     
     asyncio.create_task(process_validation_async(db_report.id, db_startup.description))
     
-    user_subscription.reports_used_this_period += 1
-    db.commit()
+    if current_user.email != "sales@airwyz.com":
+        user_subscription.reports_used_this_period += 1
+        db.commit()
     
     return {"report_id": db_report.id, "status": "processing"}
 
