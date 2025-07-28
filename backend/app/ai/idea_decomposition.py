@@ -1,13 +1,6 @@
 import re
-import nltk
-from textblob import TextBlob
 from typing import Dict, List
 import json
-
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
 
 class IdeaDecomposer:
     def __init__(self):
@@ -20,9 +13,6 @@ class IdeaDecomposer:
         }
     
     def decompose_idea(self, description: str) -> Dict:
-        blob = TextBlob(description)
-        sentences = blob.sentences
-        
         components = {
             "target_customers": self._extract_target_customers(description),
             "value_proposition": self._extract_value_proposition(description),
@@ -63,9 +53,9 @@ class IdeaDecomposer:
             if match:
                 return match.group(1).strip()
         
-        sentences = TextBlob(text).sentences
+        sentences = text.split('. ')
         if sentences:
-            return str(sentences[0])
+            return sentences[0].strip()
         
         return "Value proposition not clearly identified"
     

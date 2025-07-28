@@ -1,5 +1,4 @@
 from typing import List, Dict
-from textblob import TextBlob
 import re
 
 class ValidationAnalyzer:
@@ -73,16 +72,21 @@ class ValidationAnalyzer:
         }
     
     def _calculate_sentiment(self, content: str) -> float:
-        blob = TextBlob(content)
-        base_sentiment = blob.sentiment.polarity
-        
         content_lower = content.lower()
         positive_count = sum(1 for word in self.positive_indicators if word in content_lower)
         negative_count = sum(1 for word in self.negative_indicators if word in content_lower)
         
-        keyword_sentiment = (positive_count - negative_count) * 0.1
+        if positive_count > negative_count:
+            base_sentiment = 0.5
+        elif negative_count > positive_count:
+            base_sentiment = -0.5
+        else:
+            base_sentiment = 0.0
         
-        final_sentiment = (base_sentiment + keyword_sentiment) / 2
+        total_words = len(content_lower.split())
+        sentiment_strength = min(1.0, (positive_count + negative_count) / max(1, total_words / 10))
+        
+        final_sentiment = base_sentiment * sentiment_strength
         return max(-1, min(1, final_sentiment))
     
     def _calculate_relevance(self, content: str) -> float:
