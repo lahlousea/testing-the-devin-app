@@ -15,7 +15,7 @@ from .schemas import (
 )
 from .auth import get_current_user, verify_password, get_password_hash, create_access_token
 from .ai import IdeaDecomposer, HypothesisGenerator, ValidationAnalyzer
-from .scrapers import RedditScraper, HackerNewsScraper, BlogScraper
+from .scrapers import PerplexityScraper
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,9 +33,7 @@ app.add_middleware(
 idea_decomposer = IdeaDecomposer()
 hypothesis_generator = HypothesisGenerator()
 validation_analyzer = ValidationAnalyzer()
-reddit_scraper = RedditScraper()
-hackernews_scraper = HackerNewsScraper()
-blog_scraper = BlogScraper()
+perplexity_scraper = PerplexityScraper()
 
 @app.get("/healthz")
 async def healthz():
@@ -149,11 +147,9 @@ async def process_validation_async(report_id: int, startup_description: str):
         
         search_query = f"{components.get('value_proposition', '')} {components.get('industry', '')}"
         
-        reddit_results = reddit_scraper.search_discussions(search_query)
-        hn_results = hackernews_scraper.search_discussions(search_query)
-        blog_results = blog_scraper.search_discussions(search_query)
+        perplexity_results = perplexity_scraper.search_discussions(search_query)
         
-        all_evidence = reddit_results + hn_results + blog_results
+        all_evidence = perplexity_results
         
         analysis_result = validation_analyzer.analyze_evidence(all_evidence)
         
