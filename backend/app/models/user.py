@@ -14,6 +14,8 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     trial_reports_used = Column(Integer, default=0)
     trial_reports_limit = Column(Integer, default=1)
+    reset_token = Column(String, nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
     
     startups = relationship("Startup", back_populates="owner")
     subscription = relationship("Subscription", back_populates="user", uselist=False)

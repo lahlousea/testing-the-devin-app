@@ -5,13 +5,16 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import json
 import asyncio
+import secrets
+import hashlib
 from typing import List
 
 from .database import get_db, engine, Base
 from .models import user, startup, validation_report, hypothesis, evidence, subscription
 from .schemas import (
     UserCreate, UserResponse, Token, StartupCreate, StartupResponse,
-    ValidationRequest, ValidationReportResponse, SubscriptionResponse
+    ValidationRequest, ValidationReportResponse, SubscriptionResponse,
+    ForgotPasswordRequest, ResetPasswordRequest
 )
 from .auth import get_current_user, verify_password, get_password_hash, create_access_token
 from .ai import IdeaDecomposer, HypothesisGenerator, ValidationAnalyzer
@@ -245,3 +248,41 @@ async def get_user_startups(
     ).all()
     
     return user_startups
+
+@app.post("/api/auth/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    db_user = db.query(user.User).filter(user.User.email == request.email).first()
+    
+    if not db_user:
+        return {"message": "If an account with that email exists, you will receive password reset instructions."}
+    
+    reset_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+    
+    db_user.reset_token = token_hash
+    db_user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
+    
+    print(f"Password reset token for {request.email}: {reset_token}")
+    print(f"Reset URL: https://startup-idea-analyzer-h7gksz5m.devinapps.com/reset-password?token={reset_token}")
+    
+    return {"message": "If an account with that email exists, you will receive password reset instructions."}
+
+@app.post("/api/auth/reset-password")
+async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+    token_hash = hashlib.sha256(request.token.encode()).hexdigest()
+    
+    db_user = db.query(user.User).filter(
+        user.User.reset_token == token_hash,
+        user.User.reset_token_expires > datetime.utcnow()
+    ).first()
+    
+    if not db_user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    db_user.hashed_password = get_password_hash(request.new_password)
+    db_user.reset_token = None
+    db_user.reset_token_expires = None
+    db.commit()
+    
+    return {"message": "Password has been successfully reset"}
